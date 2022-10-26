@@ -1,31 +1,32 @@
 #!/usr/bin/env python3
 
 from __future__ import annotations
-from enum import Enum, auto
+import sys
+from enum import IntEnum, auto
 from typing import Optional
 from string import ascii_uppercase
 
-class Operator(Enum):
+# Ordered by precedence (highest to lowest)
+class Operator(IntEnum):
     NONE = auto()
     NOT = auto()
-    OR = auto()
     AND = auto()
+    OR = auto()
     IMPLIES = auto()
     EQUIVALENT = auto()
 
 operators_as_strs = {
-    Operator.OR: "∨",
-    Operator.AND: "∧",
     Operator.NOT: "¬",
+    Operator.AND: "∧",
+    Operator.OR: "∨",
     Operator.IMPLIES: "⇒",
     Operator.EQUIVALENT: "⇔"
 }
 
 operator_macros = {
-        "or":   Operator.OR,
+        "not":  Operator.NOT,
         "and":  Operator.AND,
-        "not":  Operator.NOT, # Removes space after 'not'
-        "not":  Operator.NOT, # In case 'not' is not followed by a space
+        "or":   Operator.OR,
         "eq":   Operator.EQUIVALENT,
         "<=>":  Operator.EQUIVALENT,
         "impl": Operator.IMPLIES,
@@ -56,6 +57,81 @@ class Statement:
 
         self.operator, self.left, self.right = self._parse_statement(literal)
 
+    def _parse_statement(self, literal: str) -> tuple[Operator, Optional[Statement], Statement]:
+        """Returns a callable representing the literal expression
+        and an integer representing the number of arguments.
+
+        Parantheses are allowed, other types of brackets are not.
+        All tokens of the expression (including parentheses) must be separated by spaces."""
+        literal = literal.strip()
+        if self._is_valid_var_name(literal):
+            return Operator.NONE, None, Variable(literal)
+        tokens = literal.split(" ")
+        # TODO: Find all variable names
+
+        return self._parse_substatement(tokens)
+
+    def _parse_substatement(self, tokens: list[str]) -> tuple[Operator, Optional[Statement], Statement]:
+        left: list[str] = []
+        right: list[str] = []
+        op: Optional[Operator] = None
+
+        # Find highest precedence operator
+        highest_prec = 0
+        highest_prec_index: Optional[int] = None
+        parenthesis_level = 0
+        for i, token in enumerate(tokens):
+            if token == "(":
+                parenthesis_level += 1
+                continue
+            elif token ==  ")":
+                parenthesis_level -= 1
+                continue
+            if parenthesis_level == 0 and token in operator_macros:
+                prec = operator_macros[token]
+                if highest_prec in [Operator.IMPLIES, Operator.EQUIVALENT] and \
+                    prec in [Operator.IMPLIES, Operator.EQUIVALENT]:
+                        print("Warning: Precedence is not defined between implication (=>) and equivalence (<=>). Please use parentheses to clarify your statement.")
+                        sys.exit(1)
+                if prec > highest_prec:
+                    highest_prec = prec
+                    highest_prec_index = i
+
+        if highest_prec_index is None:
+            # No operator found
+            unwrapped = self._unwrap_parentheses(tokens)
+            if len(unwrapped) != 1:
+                raise Exception(f"Multiple tokens but no operator in expression: \"{' '.join(tokens)}\"")
+            if not self._is_valid_var_name(unwrapped[0]):
+                raise SyntaxError(f"'{tokens}' is not a valid token.")
+            return Operator.NONE, None, Variable(unwrapped[0])
+        else:
+            # Got operator
+            op = operator_macros[tokens[highest_prec_index]]
+            left = tokens[:highest_prec_index]
+            if left:
+                left = self._unwrap_parentheses(left)
+                l = Statement(" ".join(left))
+            else:
+                l = None
+
+            right = tokens[highest_prec_index + 1:]
+            right = self._unwrap_parentheses(right)
+            r = Statement(" ".join(right))
+
+            return op, l, r
+
+    def _is_valid_var_name(self, name_candidate: str) -> bool:
+        # TODO: Consider extending the definition of a valid variable name
+        return name_candidate in ascii_uppercase
+
+    def _unwrap_parentheses(self, it: list[str]) -> list[str]:
+        if it[0] == "(":
+            it = it[1:]
+        if it[-1] == ")":
+            it = it[:-1]
+        return it
+
     def evaluate(self, var_table: dict[str, bool]) -> bool:
         match self.operator:
             case Operator.NONE:
@@ -79,80 +155,8 @@ class Statement:
 
     __call__ = evaluate
 
-    def _parse_statement(self, literal: str) -> tuple[Operator, Optional[Statement], Statement]:
-        """Returns a callable representing the literal expression
-        and an integer representing the number of arguments.
-
-        Parantheses are allowed, other types of brackets are not.
-        All tokens of the expression (including parentheses) must be separated by spaces."""
-        literal = literal.strip()
-        if self._is_valid_var_name(literal):
-            return Operator.NONE, None, Variable(literal)
-        tokens = literal.split(" ")
-        # TODO: Find all variable names
-
-        return self._parse_substatement(tokens)
-
-    def _parse_substatement(self, tokens: list[str]) -> tuple[Operator, Optional[Statement], Statement]:
-        parenthesis_level = 0
-
-        acc: list[str] = []
-        left: list[str] = []
-        right: list[str] = []
-        op: Optional[Operator] = None
-        for t in tokens:
-            if t == "(":
-                acc += t
-                parenthesis_level += 1
-                continue
-            elif t ==  ")":
-                parenthesis_level -= 1
-                acc += t
-                continue
-
-            if parenthesis_level == 0:
-                if self._is_valid_var_name(t):
-                    acc.append(t)
-                    continue
-                elif t in operator_macros:
-                    if not left:
-                        left = acc
-                        acc = []
-                    op = operator_macros[t]
-                    continue
-                else:
-                    raise SyntaxError(f"'{t}' is not a valid token.")
-            else:
-                acc.append(t)
-
-        right = acc
-
-        if left:
-            if left[0] == "(":
-                left = left[1:]
-            if left[-1] == ")":
-                left = left[:-1]
-        if right:
-            if right[0] == "(":
-                right = right[1:]
-            if right[-1] == ")":
-                right = right[:-1]
-        if not op:
-            if len(left) == 0:
-                op = op or Operator.NONE
-                l = None
-            else:
-                raise Exception(f"No operator in expression but right operand: {tokens}")
-        else:
-            l = Statement(" ".join(left))
-        r = Statement(" ".join(right))
-        return op, l, r
-
-    def _is_valid_var_name(self, name_candidate: str) -> bool:
-        # TODO: Consider extending the definition of a valid variable name
-        return name_candidate in ascii_uppercase
-
     def format(self):
+        # Use cached value if available
         if self._formatted is None:
             self._formatted = self._do_format()
         return self._formatted
@@ -164,6 +168,7 @@ class Statement:
         return f
 
 class Variable(Statement):
+    """Special case for a Statement which consists of only one variable"""
     def __init__(self, name: str):
         self.name = name
 
@@ -197,10 +202,7 @@ def main():
     var_table = {var: False for var in variables}
 
     statements = [
-        Statement("A or B"),
-        Statement("A and B"),
-        Statement("A => B"),
-        Statement("A <=> B")
+        Statement("A <=> B => A"),
     ]
 
     table = []
