@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from __future__ import annotations
-from enum import IntEnum, auto
+from enum import Enum, IntEnum, auto
 from typing import Optional
 from string import ascii_uppercase
 
@@ -30,6 +30,22 @@ operators_as_strs = {
     Operator.EQUIVALENT: "⇔"
 }
 
+operators_as_latex = {
+    Operator.NOT: "\\lnot",
+    Operator.AND: "\\land",
+    Operator.OR: "\\lor",
+    Operator.IMPLIES: "\\Rightarrow",
+    Operator.EQUIVALENT: "\\Leftrightarrow"
+}
+LATEX_TABLE_PRELUDE = "\\begin{{tabular}}{{ {columns} }}\n    \\hline"
+LATEX_TABLE_EPILOGUE = "\\end{tabular}"
+LATEX_COLUMN_DELIM = " & "
+LATEX_INDENT = "    "
+LATEX_NEWLINE = " \\\\ \\hline"
+LATEX_WRAP_CHAR = "$"
+TRUE_STR = "w"
+FALSE_STR = "f"
+
 operator_macros = {
         "not":  Operator.NOT,
         "and":  Operator.AND,
@@ -39,6 +55,10 @@ operator_macros = {
         "impl": Operator.IMPLIES,
         "=>":   Operator.IMPLIES,
 }
+
+class Formatting(Enum):
+    HUMAN = auto()
+    LATEX = auto()
 
 
 class Statement:
@@ -170,8 +190,6 @@ class Statement:
                     level -= 1
                     stack.append(level)
         while literal[0] == "(":
-            print(stack)
-            print(literal)
             if literal[-1] != ")":
                 break
             if stack[0] in stack[1:-1]:
@@ -204,17 +222,24 @@ class Statement:
 
     __call__ = evaluate
 
-    def format(self):
+    def format(self, mode=Formatting.HUMAN):
         # Use cached value if available
         if self._formatted is None:
-            self._formatted = self._do_format()
+            self._formatted = self._do_format(mode)
         return self._formatted
 
-    def _do_format(self) -> str:
-        f = self.literal
+    def _do_format(self, mode: Formatting) -> str:
+        literal = self.literal
+        match mode:
+            case Formatting.HUMAN:
+                subst_table = operators_as_strs
+            case Formatting.LATEX:
+                subst_table = operators_as_latex
+            case _:
+                raise Exception("Exhaustive handling of Formatting in _do_format")
         for macro, subst in operator_macros.items():
-            f = f.replace(macro, operators_as_strs[subst])
-        return f
+            literal = literal.replace(macro, subst_table[subst])
+        return literal
 
 class Variable(Statement):
     """Special case for a Statement which consists of only one variable"""
@@ -233,40 +258,105 @@ def implication(a: bool, b: bool) -> bool:
 def equivalence(a: bool, b: bool) -> bool:
     return a == b
 
-def format_bool(a: bool) -> str:
-    return a and "T" or "F"
+class Formatter:
+    def __init__(self, variables: list[str], statements: list[Statement], mode=Formatting.HUMAN) -> None:
+        self.variables = variables
+        self.statements = statements
+        self.mode = mode
 
-def format_table(table: list[list[str]], delim: str = "   ") -> str:
-    col_widths = [max([len(table[row][col]) for row in range(len(table))])
-        for col in range(len(table[0]))]
-    out = ""
-    for i, row in enumerate(table):
-        out += delim.join([el.ljust(col_widths[j]) for j, el in enumerate(row)])
-        out += "\n" * (i != len(table) - 1)
-        
-    return out
+    def format_table(self):
+        var_table = {var: False for var in self.variables}
+        table = [[]]
+        n_cols = len(self.variables) + len(self.statements)
+        for var in self.variables:
+            table[0].append(self.wrap_if(var))
+        for statement in self.statements:
+            table[0].append(self.wrap_if(statement.format(mode=self.mode)))
+
+        for i in range(2 ** len(self.variables)):
+            for j, var in enumerate(reversed(self.variables)):
+                var_table[var] = not((i >> j) % 2)
+            new_row = []
+            for v in self.variables:
+                new_row.append(self.wrap_if(self.format_bool(var_table[v])))
+            for statement in self.statements:
+                new_row.append(self.wrap_if(self.format_bool(statement(var_table))))
+            table.append(new_row)
+
+        match self.mode:
+            case Formatting.HUMAN:
+                col_delim = "   "
+                before_row = ""
+                after_row = ""
+                output = ""
+            case Formatting.LATEX:
+                col_delim = LATEX_COLUMN_DELIM
+                before_row = LATEX_INDENT
+                after_row = LATEX_NEWLINE
+                output = LATEX_TABLE_PRELUDE.format(columns = "|c" * n_cols + "|") + "\n"
+            case _:
+                raise Exception("Exhaustive handling of Fromatting in format_table()")
+
+        output += self._table_to_str(table, col_delim, before_row, after_row)
+
+        match self.mode:
+            case Formatting.HUMAN:
+                pass
+            case Formatting.LATEX:
+                output += "\n" + LATEX_TABLE_EPILOGUE
+            case _:
+                raise Exception("Exhaustive handling of Fromatting in format_table()")
+
+        return output
+
+    def _table_to_str(self, table: list[list[str]], col_delim: str, before_row: str, after_row: str) -> str:
+        col_widths = [max([len(table[row][col]) for row in range(len(table))])
+            for col in range(len(table[0]))]
+        out = ""
+        for i, row in enumerate(table):
+            if before_row:
+                out += before_row
+            elements = []
+            for j, el in enumerate(row):
+                if self.mode == Formatting.HUMAN:
+                    elements.append(el.ljust(col_widths[j]) if self.mode == Formatting.HUMAN else el)
+                else:
+                    elements.append(el)
+            out += col_delim.join(elements)
+            if after_row:
+                out += after_row
+            # Append newline if it's not the last line
+            out += "\n" * (i != len(table) - 1)
+
+        return out
+
+    def format_bool(self, bool_value: bool) -> str:
+        formatted = bool_value and TRUE_STR or FALSE_STR
+        return formatted
+
+    def wrap_if(self, a: str) -> str:
+        def _latex_wrap(a: str) -> str:
+            return LATEX_WRAP_CHAR + a + LATEX_WRAP_CHAR
+
+        match self.mode:
+            case Formatting.HUMAN:
+                return a
+            case Formatting.LATEX:
+                return _latex_wrap(a)
+            case _:
+                raise Exception("Exhaustive handling of Fromatting in warp_if()")
+
 
 def main():
+    # TODO: Move main to separate file, untracked by git
     variables = ["A", "B", "C"]
-    var_table = {var: False for var in variables}
-
     statements = [
-            Statement("(A or B => C) <=> (A => C) and (B => C)"),
+        Statement("(not A and B) or (A and not B)"),
+        Statement("(not A and B) or (A and not B)"),
+        Statement("(A or B) and not (A and B)"),
     ]
-
-    table = []
-    table.append([*ascii_uppercase[:len(variables)], *[s.format() for s in statements]])
-
-    for i in range(2 ** len(variables)):
-        for j, var in enumerate(reversed(variables)):
-            var_table[var] = not((i >> j) % 2)
-        table.append([])
-        table[-1].extend((map(format_bool,
-            [var_table[v] for v in variables])))
-        table[-1].extend((map(format_bool,
-            [s(var_table) for s in statements])))
-
-    print(format_table(table))
+    f = Formatter(variables, statements, mode=Formatting.LATEX)
+    print(f.format_table())
 
 if __name__ == "__main__":
     main()
