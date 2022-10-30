@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from enum import Enum, IntEnum, auto
-from typing import Optional
+from typing import Optional, Set
 from string import ascii_uppercase
 
 class AmbiguousPrecedence(Exception):
@@ -80,11 +80,12 @@ class Statement:
         self.operator: Operator
         self.left: Optional[Statement]
         self.right: Statement
+        self.variables: Set[str]
         self._formatted: Optional[str] = None
 
-        self.operator, self.left, self.right = self._parse_statement(literal)
+        self.operator, self.left, self.right, self.variables = self._parse_statement(literal)
 
-    def _parse_statement(self, literal: str) -> tuple[Operator, Optional[Statement], Statement]:
+    def _parse_statement(self, literal: str) -> tuple[Operator, Optional[Statement], Statement, Set[str]]:
         """Returns a callable representing the literal expression
         and an integer representing the number of arguments.
 
@@ -92,16 +93,15 @@ class Statement:
         All tokens of the expression (including parentheses) must be separated by spaces."""
         literal = literal.strip()
         if self._is_valid_var_name(literal):
-            return Operator.NONE, None, Variable(literal)
-        tokens = self._split_tokens(literal)
-        # TODO: Find all variable names
+            return Operator.NONE, None, Variable(literal), {literal}
+        result = self._split_tokens(literal)
 
         try:
-            tokens = self._parse_substatement(tokens)
+            result = self._parse_substatement(result)
         except AmbiguousPrecedence as e:
             raise AmbiguousPrecedence(literal)
 
-        return tokens
+        return result
 
     def _split_tokens(self, literal: str) -> list[str]:
         tokens = []
@@ -120,7 +120,7 @@ class Statement:
 
         return tokens
 
-    def _parse_substatement(self, tokens: list[str]) -> tuple[Operator, Optional[Statement], Statement]:
+    def _parse_substatement(self, tokens: list[str]) -> tuple[Operator, Optional[Statement], Statement, Set[str]]:
         left: list[str] = []
         right: list[str] = []
         op: Optional[Operator] = None
@@ -157,7 +157,7 @@ class Statement:
                 raise Exception(f"Multiple variables but no operator in expression: \"{' '.join(tokens)}\"")
             if not self._is_valid_var_name(tokens[0]):
                 raise SyntaxError(f"'{tokens}' is not a valid token.")
-            return Operator.NONE, None, Variable(tokens[0])
+            return Operator.NONE, None, Variable(tokens[0]), {tokens[0]}
         else:
             # Got operator
             op = operator_macros[tokens[highest_prec_index]]
@@ -165,14 +165,17 @@ class Statement:
             if left:
                 left = self._unwrap_parentheses(left)
                 l = Statement(" ".join(left))
+                l_vars = l.variables
             else:
                 l = None
+                l_vars = set()
 
             right = tokens[highest_prec_index + 1:]
             right = self._unwrap_parentheses(right)
             r = Statement(" ".join(right))
+            var_names = r.variables.union(l_vars)
 
-            return op, l, r
+            return op, l, r, var_names
 
     def _is_valid_var_name(self, name_candidate: str) -> bool:
         # TODO: Consider extending the definition of a valid variable name
@@ -259,10 +262,15 @@ def equivalence(a: bool, b: bool) -> bool:
     return a == b
 
 class Formatter:
-    def __init__(self, variables: list[str], statements: list[Statement], mode=Formatting.HUMAN) -> None:
-        self.variables = variables
+    def __init__(self, statements: list[Statement], mode=Formatting.HUMAN) -> None:
         self.statements = statements
         self.mode = mode
+
+        variables = set()
+        for statement in self.statements:
+            variables = variables.union(statement.variables)
+        self.variables = list(variables)
+        self.variables.sort()
 
     def format_table(self):
         var_table = {var: False for var in self.variables}
@@ -349,13 +357,12 @@ class Formatter:
 
 def main():
     # TODO: Move main to separate file, untracked by git
-    variables = ["A", "B", "C"]
     statements = [
         Statement("(not A and B) or (A and not B)"),
         Statement("(not A and B) or (A and not B)"),
         Statement("(A or B) and not (A and B)"),
     ]
-    f = Formatter(variables, statements, mode=Formatting.LATEX)
+    f = Formatter(statements, mode=Formatting.HUMAN)
     print(f.format_table())
 
 if __name__ == "__main__":
