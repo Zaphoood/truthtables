@@ -66,10 +66,27 @@ class Statement:
         literal = literal.strip()
         if self._is_valid_var_name(literal):
             return Operator.NONE, None, Variable(literal)
-        tokens = literal.split(" ")
+        tokens = self._split_tokens(literal)
         # TODO: Find all variable names
 
         return self._parse_substatement(tokens)
+
+    def _split_tokens(self, literal: str) -> list[str]:
+        tokens = []
+        acc = ""
+        for c in literal:
+            if c in [" ", "(", ")"]:
+                if acc:
+                    tokens.append(acc)
+                    acc = ""
+                if c != " ":
+                    tokens.append(c)
+            else:
+                acc += c
+        if acc:
+            tokens.append(acc)
+
+        return tokens
 
     def _parse_substatement(self, tokens: list[str]) -> tuple[Operator, Optional[Statement], Statement]:
         left: list[str] = []
@@ -101,6 +118,8 @@ class Statement:
             # No operator found
             unwrapped = self._unwrap_parentheses(tokens)
             if len(unwrapped) != 1:
+                # TODO: This should not be raised for '((A))` etc. which is five tokens
+                # Rather this Exception should be raised if there are multiple variables but no operator
                 raise Exception(f"Multiple tokens but no operator in expression: \"{' '.join(tokens)}\"")
             if not self._is_valid_var_name(unwrapped[0]):
                 raise SyntaxError(f"'{tokens}' is not a valid token.")
@@ -126,10 +145,8 @@ class Statement:
         return name_candidate in ascii_uppercase
 
     def _unwrap_parentheses(self, it: list[str]) -> list[str]:
-        if it[0] == "(":
-            it = it[1:]
-        if it[-1] == ")":
-            it = it[:-1]
+        if it[0] == "(" and it[-1] == ")":
+            it = it[1:-1]
         return it
 
     def evaluate(self, var_table: dict[str, bool]) -> bool:
