@@ -105,10 +105,12 @@ class Statement:
         right: list[str] = []
         op: Optional[Operator] = None
 
+        tokens = self._unwrap_parentheses(tokens)
         # Find highest precedence operator
         highest_prec = 0
         highest_prec_index: Optional[int] = None
         parenthesis_level = 0
+        n_vars = 0
         for i, token in enumerate(tokens):
             if token == "(":
                 parenthesis_level += 1
@@ -118,24 +120,24 @@ class Statement:
                 continue
             if parenthesis_level == 0 and token in operator_macros:
                 prec = operator_macros[token]
-                print(token)
                 if highest_prec in [Operator.IMPLIES, Operator.EQUIVALENT] and \
                     prec in [Operator.IMPLIES, Operator.EQUIVALENT]:
                         raise AmbiguousPrecedence()
                 if prec > highest_prec:
                     highest_prec = prec
                     highest_prec_index = i
+            if self._is_valid_var_name(token):
+                n_vars += 1
 
         if highest_prec_index is None:
             # No operator found
-            unwrapped = self._unwrap_parentheses(tokens)
-            if len(unwrapped) != 1:
-                # TODO: This should not be raised for '((A))` etc. which is five tokens
-                # Rather this Exception should be raised if there are multiple variables but no operator
-                raise Exception(f"Multiple tokens but no operator in expression: \"{' '.join(tokens)}\"")
-            if not self._is_valid_var_name(unwrapped[0]):
+            if n_vars == 0:
+                raise Exception(f"No variables and no operator in expression: \"{' '.join(tokens)}\"")
+            elif n_vars > 1:
+                raise Exception(f"Multiple variables but no operator in expression: \"{' '.join(tokens)}\"")
+            if not self._is_valid_var_name(tokens[0]):
                 raise SyntaxError(f"'{tokens}' is not a valid token.")
-            return Operator.NONE, None, Variable(unwrapped[0])
+            return Operator.NONE, None, Variable(tokens[0])
         else:
             # Got operator
             op = operator_macros[tokens[highest_prec_index]]
@@ -156,10 +158,28 @@ class Statement:
         # TODO: Consider extending the definition of a valid variable name
         return name_candidate in ascii_uppercase
 
-    def _unwrap_parentheses(self, it: list[str]) -> list[str]:
-        if it[0] == "(" and it[-1] == ")":
-            it = it[1:-1]
-        return it
+    def _unwrap_parentheses(self, literal: list[str]) -> list[str]:
+        stack = []
+        level = 0
+        for c in literal:
+            match c:
+                case "(":
+                    stack.append(level)
+                    level += 1
+                case ")":
+                    level -= 1
+                    stack.append(level)
+        while literal[0] == "(":
+            print(stack)
+            print(literal)
+            if literal[-1] != ")":
+                break
+            if stack[0] in stack[1:-1]:
+                break
+            stack = stack[1:-1]
+            literal = literal[1:-1]
+
+        return literal
 
     def evaluate(self, var_table: dict[str, bool]) -> bool:
         match self.operator:
@@ -231,8 +251,7 @@ def main():
     var_table = {var: False for var in variables}
 
     statements = [
-            #Statement("(A or B => C) <=> (A => C) or (B => C)"),
-        Statement("A <=> (A => C) and (B => C)"),
+            Statement("(A or B => C) <=> (A => C) and (B => C)"),
     ]
 
     table = []
