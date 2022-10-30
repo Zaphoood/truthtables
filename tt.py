@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 
 from __future__ import annotations
-import sys
 from enum import IntEnum, auto
 from typing import Optional
 from string import ascii_uppercase
+
+class AmbiguousPrecedence(Exception):
+    def __init__(self, expression: Optional[str] = None):
+        message = "Precedence is not defined between implication (=>) and equivalence (<=>). Please use parentheses to clarify your statement."
+        if expression:
+            super().__init__(message + f" In expression:\n{expression}")
+        else:
+            super().__init__(message)
 
 # Ordered by precedence (highest to lowest)
 class Operator(IntEnum):
@@ -69,7 +76,12 @@ class Statement:
         tokens = self._split_tokens(literal)
         # TODO: Find all variable names
 
-        return self._parse_substatement(tokens)
+        try:
+            tokens = self._parse_substatement(tokens)
+        except AmbiguousPrecedence as e:
+            raise AmbiguousPrecedence(literal)
+
+        return tokens
 
     def _split_tokens(self, literal: str) -> list[str]:
         tokens = []
@@ -106,10 +118,10 @@ class Statement:
                 continue
             if parenthesis_level == 0 and token in operator_macros:
                 prec = operator_macros[token]
+                print(token)
                 if highest_prec in [Operator.IMPLIES, Operator.EQUIVALENT] and \
                     prec in [Operator.IMPLIES, Operator.EQUIVALENT]:
-                        print("Warning: Precedence is not defined between implication (=>) and equivalence (<=>). Please use parentheses to clarify your statement.")
-                        sys.exit(1)
+                        raise AmbiguousPrecedence()
                 if prec > highest_prec:
                     highest_prec = prec
                     highest_prec_index = i
@@ -215,11 +227,12 @@ def format_table(table: list[list[str]], delim: str = "   ") -> str:
     return out
 
 def main():
-    variables = ["A", "B"]
+    variables = ["A", "B", "C"]
     var_table = {var: False for var in variables}
 
     statements = [
-        Statement("A <=> B => A"),
+            #Statement("(A or B => C) <=> (A => C) or (B => C)"),
+        Statement("A <=> (A => C) and (B => C)"),
     ]
 
     table = []
