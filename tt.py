@@ -1,17 +1,7 @@
-#!/usr/bin/env python3
-
 from __future__ import annotations
 from enum import Enum, IntEnum, auto
 from typing import Optional, Set
 from string import ascii_uppercase
-
-class AmbiguousPrecedence(Exception):
-    def __init__(self, expression: Optional[str] = None):
-        message = "Precedence is not defined between implication (=>) and equivalence (<=>). Please use parentheses to clarify your statement."
-        if expression:
-            super().__init__(message + f" In expression:\n{expression}")
-        else:
-            super().__init__(message)
 
 # Ordered by precedence (highest to lowest)
 class Operator(IntEnum):
@@ -60,6 +50,13 @@ class Formatting(Enum):
     HUMAN = auto()
     LATEX = auto()
 
+class AmbiguousPrecedence(Exception):
+    def __init__(self, expression: Optional[str] = None):
+        message = "Precedence is not defined between implication (=>) and equivalence (<=>). Please use parentheses to clarify your statement."
+        if expression:
+            super().__init__(message + f" In expression:\n{expression}")
+        else:
+            super().__init__(message)
 
 class Statement:
     """Represent a logical statement that can be formatted nicely and whose value can be evaluated
@@ -75,48 +72,51 @@ class Statement:
     Note that Statements that have unary operators or no operator at all (such as "B" in the above example) have no right child.
     """
 
-    def __init__(self, literal: str):
-        self.literal = literal
+    def __init__(self, tokens: list[str] | str):
+        self.literal: str
         self.operator: Operator
         self.left: Optional[Statement]
         self.right: Statement
         self.variables: Set[str]
         self._formatted: Optional[str] = None
 
-        self.operator, self.left, self.right, self.variables = self._parse_statement(literal)
+        self.literal, self.operator, self.left, self.right, self.variables = self._parse_statement(tokens)
 
-    def _parse_statement(self, literal: str) -> tuple[Operator, Optional[Statement], Statement, Set[str]]:
+    def _parse_statement(self, tokens: list[str] | str) -> tuple[str, Operator, Optional[Statement], Statement, Set[str]]:
         """Returns a callable representing the literal expression
         and an integer representing the number of arguments.
 
         Parantheses are allowed, other types of brackets are not.
         All tokens of the expression (including parentheses) must be separated by spaces."""
-        literal = literal.strip()
-        if self._is_valid_var_name(literal):
-            return Operator.NONE, None, Variable(literal), {literal}
-        result = self._split_tokens(literal)
+        if isinstance(tokens, str):
+            tokens = tokens.strip()
+            if self._is_valid_var_name(tokens):
+                return tokens, Operator.NONE, None, Variable(tokens), {tokens}
+            split = self._split_tokens(tokens)
+            literal = tokens
+        elif isinstance(tokens, list):
+            split = tokens
+            literal = " ".join(tokens)
 
         try:
-            result = self._parse_substatement(result)
-        except AmbiguousPrecedence as e:
+            return (literal, *self._parse_substatement(split))
+        except AmbiguousPrecedence:
             raise AmbiguousPrecedence(literal)
-
-        return result
 
     def _split_tokens(self, literal: str) -> list[str]:
         tokens = []
-        acc = ""
-        for c in literal:
-            if c in [" ", "(", ")"]:
-                if acc:
-                    tokens.append(acc)
-                    acc = ""
-                if c != " ":
-                    tokens.append(c)
+        accumulator = ""
+        for char in literal:
+            if char in [" ", "(", ")"]:
+                if accumulator:
+                    tokens.append(accumulator)
+                    accumulator = ""
+                if char != " ":
+                    tokens.append(char)
             else:
-                acc += c
-        if acc:
-            tokens.append(acc)
+                accumulator += char
+        if accumulator:
+            tokens.append(accumulator)
 
         return tokens
 
@@ -156,26 +156,23 @@ class Statement:
             elif n_vars > 1:
                 raise Exception(f"Multiple variables but no operator in expression: \"{' '.join(tokens)}\"")
             if not self._is_valid_var_name(tokens[0]):
-                raise SyntaxError(f"'{tokens}' is not a valid token.")
+                raise SyntaxError(f"'{tokens}' doesn't contain a valid variable name.")
+
             return Operator.NONE, None, Variable(tokens[0]), {tokens[0]}
+
+        if highest_prec_index > 0:
+            left = self._unwrap_parentheses(tokens[:highest_prec_index])
+            left_statement = Statement(left)
+            left_vars = left_statement.variables
         else:
-            # Got operator
-            op = operator_macros[tokens[highest_prec_index]]
-            left = tokens[:highest_prec_index]
-            if left:
-                left = self._unwrap_parentheses(left)
-                l = Statement(" ".join(left))
-                l_vars = l.variables
-            else:
-                l = None
-                l_vars = set()
+            left_statement = None
+            left_vars = set()
+        right = self._unwrap_parentheses(tokens[highest_prec_index + 1:])
+        right_statement = Statement(right)
+        variables = right_statement.variables.union(left_vars)
+        op = operator_macros[tokens[highest_prec_index]]
 
-            right = tokens[highest_prec_index + 1:]
-            right = self._unwrap_parentheses(right)
-            r = Statement(" ".join(right))
-            var_names = r.variables.union(l_vars)
-
-            return op, l, r, var_names
+        return op, left_statement, right_statement, variables
 
     def _is_valid_var_name(self, name_candidate: str) -> bool:
         # TODO: Consider extending the definition of a valid variable name
@@ -184,8 +181,8 @@ class Statement:
     def _unwrap_parentheses(self, literal: list[str]) -> list[str]:
         stack = []
         level = 0
-        for c in literal:
-            match c:
+        for char in literal:
+            match char:
                 case "(":
                     stack.append(level)
                     level += 1
@@ -203,25 +200,26 @@ class Statement:
         return literal
 
     def evaluate(self, var_table: dict[str, bool]) -> bool:
-        match self.operator:
-            case Operator.NONE:
-                return self.right.evaluate(var_table)
-            case Operator.NOT:
-                return not self.right.evaluate(var_table)
-            case Operator.OR:
-                assert isinstance(self.left, Statement)
-                return self.left.evaluate(var_table) or self.right.evaluate(var_table)
-            case Operator.AND:
-                assert isinstance(self.left, Statement)
-                return self.left.evaluate(var_table) and self.right.evaluate(var_table)
-            case Operator.IMPLIES:
-                assert isinstance(self.left, Statement)
-                return implication(self.left.evaluate(var_table), self.right.evaluate(var_table))
-            case Operator.EQUIVALENT:
-                assert isinstance(self.left, Statement)
-                return equivalence(self.left.evaluate(var_table), self.right.evaluate(var_table))
-            case _:
-                raise Exception("Exhaustive handling of Operators")
+        if self.left is None:
+            match self.operator:
+                case Operator.NONE:
+                    return self.right.evaluate(var_table)
+                case Operator.NOT:
+                    return not self.right.evaluate(var_table)
+                case _:
+                    raise Exception("Two operands for unary operator ({self.operator}).")
+        else:
+            match self.operator:
+                case Operator.OR:
+                    return self.left.evaluate(var_table) or self.right.evaluate(var_table)
+                case Operator.AND:
+                    return self.left.evaluate(var_table) and self.right.evaluate(var_table)
+                case Operator.IMPLIES:
+                    return implication(self.left.evaluate(var_table), self.right.evaluate(var_table))
+                case Operator.EQUIVALENT:
+                    return equivalence(self.left.evaluate(var_table), self.right.evaluate(var_table))
+                case _:
+                    raise Exception("No left-hand operand for binary operator ({self.operator}).")
 
     __call__ = evaluate
 
@@ -274,34 +272,29 @@ class Formatter:
 
     def format_table(self):
         var_table = {var: False for var in self.variables}
-        table = [[]]
-        n_cols = len(self.variables) + len(self.statements)
-        for var in self.variables:
-            table[0].append(self.wrap_if(var))
-        for statement in self.statements:
-            table[0].append(self.wrap_if(statement.format(mode=self.mode)))
-
+        self.statements = [Statement(var) for var in self.variables] + self.statements
+        n_cols = len(self.statements)
+        table = []
+        table.append([self.wrap_if(statement.format(mode=self.mode)) for statement in self.statements])
         for i in range(2 ** len(self.variables)):
             for j, var in enumerate(reversed(self.variables)):
                 var_table[var] = not((i >> j) % 2)
-            new_row = []
-            for v in self.variables:
-                new_row.append(self.wrap_if(self.format_bool(var_table[v])))
-            for statement in self.statements:
-                new_row.append(self.wrap_if(self.format_bool(statement(var_table))))
-            table.append(new_row)
+            table.append([
+                self.wrap_if(self.format_bool(statement(var_table)))
+                for statement in self.statements
+            ])
 
+        output = ""
         match self.mode:
             case Formatting.HUMAN:
                 col_delim = "   "
                 before_row = ""
                 after_row = ""
-                output = ""
             case Formatting.LATEX:
                 col_delim = LATEX_COLUMN_DELIM
                 before_row = LATEX_INDENT
                 after_row = LATEX_NEWLINE
-                output = LATEX_TABLE_PRELUDE.format(columns = "|c" * n_cols + "|") + "\n"
+                output += LATEX_TABLE_PRELUDE.format(columns = "|c" * n_cols + "|") + "\n"
             case _:
                 raise Exception("Exhaustive handling of Fromatting in format_table()")
 
@@ -354,17 +347,4 @@ class Formatter:
             case _:
                 raise Exception("Exhaustive handling of Fromatting in warp_if()")
 
-
-def main():
-    # TODO: Move main to separate file, untracked by git
-    statements = [
-        Statement("(not A and B) or (A and not B)"),
-        Statement("(not A and B) or (A and not B)"),
-        Statement("(A or B) and not (A and B)"),
-    ]
-    f = Formatter(statements, mode=Formatting.HUMAN)
-    print(f.format_table())
-
-if __name__ == "__main__":
-    main()
 
