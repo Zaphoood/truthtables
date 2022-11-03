@@ -27,11 +27,11 @@ operators_as_latex = {
     Operator.IMPLIES: "\\Rightarrow",
     Operator.EQUIVALENT: "\\Leftrightarrow"
 }
-LATEX_TABLE_PRELUDE = "\\begin{{tabular}}{{ {columns} }}\n    \\hline"
+LATEX_TABLE_PRELUDE = "\\begin{{tabular}}{{ {columns} }}"
 LATEX_TABLE_EPILOGUE = "\\end{tabular}"
 LATEX_COLUMN_DELIM = " & "
 LATEX_INDENT = "    "
-LATEX_NEWLINE = " \\\\ \\hline"
+LATEX_HLINE = LATEX_INDENT + " \\\\ \\hline"
 LATEX_WRAP_CHAR = "$"
 TRUE_STR = "w"
 FALSE_STR = "f"
@@ -293,8 +293,8 @@ class Formatter:
             case Formatting.LATEX:
                 col_delim = LATEX_COLUMN_DELIM
                 before_row = LATEX_INDENT
-                after_row = LATEX_NEWLINE
-                output += LATEX_TABLE_PRELUDE.format(columns = "|c" * n_cols + "|") + "\n"
+                after_row = LATEX_HLINE
+                output += LATEX_TABLE_PRELUDE.format(columns = "|".join("c" * n_cols)) + "\n"
             case _:
                 raise Exception("Exhaustive handling of Fromatting in format_table()")
 
@@ -310,7 +310,7 @@ class Formatter:
 
         return output
 
-    def _table_to_str(self, table: list[list[str]], col_delim: str, before_row: str, after_row: str) -> str:
+    def _table_to_str(self, table: list[list[str]], col_delim: str, before_row: str, between_rows: str) -> str:
         col_widths = [max([len(table[row][col]) for row in range(len(table))])
             for col in range(len(table[0]))]
         out = ""
@@ -319,15 +319,17 @@ class Formatter:
                 out += before_row
             elements = []
             for j, el in enumerate(row):
+                # TODO: Abstract this
                 if self.mode == Formatting.HUMAN:
                     elements.append(el.ljust(col_widths[j]) if self.mode == Formatting.HUMAN else el)
                 else:
                     elements.append(el)
             out += col_delim.join(elements)
-            if after_row:
-                out += after_row
+            if i != len(table) - 1:
+                if between_rows:
+                    out += "\n" + between_rows
+                out += "\n"
             # Append newline if it's not the last line
-            out += "\n" * (i != len(table) - 1)
 
         return out
 
@@ -345,6 +347,6 @@ class Formatter:
             case Formatting.LATEX:
                 return _latex_wrap(a)
             case _:
-                raise Exception("Exhaustive handling of Fromatting in warp_if()")
+                raise Exception("Exhaustive handling of Fromatting in wrap_if()")
 
 
