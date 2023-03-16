@@ -11,7 +11,7 @@ Simply clone the repository into your project folder.
 
 Import everything you need
 ```
-from truthtables import Statement, Fromatter, Formatting
+from truthtables import Statement, Formatter, Formatting
 ```
 
 Create logical statements

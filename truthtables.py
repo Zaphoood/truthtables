@@ -342,7 +342,7 @@ class Formatter:
                     LATEX_TABLE_PRELUDE.format(columns="|".join("c" * n_cols)) + "\n"
                 )
             case _:
-                raise Exception("Exhaustive handling of Fromatting in format_table()")
+                raise Exception("Exhaustive handling of Formatting in format_table()")
 
         output += self._table_to_str(table, col_delim, before_row, after_row)
 
@@ -352,7 +352,7 @@ class Formatter:
             case Formatting.LATEX:
                 output += "\n" + LATEX_TABLE_EPILOGUE
             case _:
-                raise Exception("Exhaustive handling of Fromatting in format_table()")
+                raise Exception("Exhaustive handling of Formatting in format_table()")
 
         return output
 
@@ -399,4 +399,4 @@ class Formatter:
             case Formatting.LATEX:
                 return _latex_wrap(a)
             case _:
-                raise Exception("Exhaustive handling of Fromatting in wrap_if()")
+                raise Exception("Exhaustive handling of Formatting in wrap_if()")
