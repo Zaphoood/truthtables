@@ -245,10 +245,7 @@ class Variable(Statement):
 
 
 def implies(a: bool, b: bool) -> bool:
-    if a:
-        return b
-    else:
-        return True
+    return (not a) or b
 
 
 def equivalent(a: bool, b: bool) -> bool:
