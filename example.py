@@ -9,6 +9,7 @@ def main():
             Statement("(A <=> B) and (B <=> C)"),
         ]
         f = Formatter(statements, mode=Formatting.HUMAN)
+        # f = Formatter(statements, mode=Formatting.LATEX)
         print(f.format_table())
     except MalformedExpressionError as e:
         print(e)

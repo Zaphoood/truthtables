@@ -294,39 +294,34 @@ class Formatter:
         match self.mode:
             case Formatting.HUMAN:
                 col_delim = "   "
-                before_row = ""
-                after_row = ""
+                before_row = None
+                between_rows = None
             case Formatting.LATEX:
                 col_delim = LATEX_COLUMN_DELIM
                 before_row = LATEX_INDENT
-                after_row = LATEX_HLINE
-                output += (
-                    LATEX_TABLE_PRELUDE.format(columns="|".join("c" * n_cols)) + "\n"
-                )
+                between_rows = LATEX_HLINE
+
             case _:
                 raise Exception("Exhaustive handling of Formatting in format_table()")
+
+        if self.mode == Formatting.LATEX:
+            output += LATEX_TABLE_PRELUDE.format(columns="|".join("c" * n_cols)) + "\n"
 
         output += table_to_str(
             table,
             col_delim,
             before_row,
-            after_row,
+            between_rows,
             ljust=self.mode == Formatting.HUMAN,
         )
 
-        match self.mode:
-            case Formatting.HUMAN:
-                pass
-            case Formatting.LATEX:
-                output += "\n" + LATEX_TABLE_EPILOGUE
-            case _:
-                raise Exception("Exhaustive handling of Formatting in format_table()")
+        if self.mode == Formatting.LATEX:
+            output += "\n" + LATEX_TABLE_EPILOGUE
 
         return output
 
-    def format_bool(self, bool_value: bool) -> str:
-        formatted = bool_value and TRUE_STR or FALSE_STR
-        return formatted
+    def format_bool(self, value: bool) -> str:
+        return TRUE_STR if value else FALSE_STR
 
     def wrap_if(self, a: str) -> str:
         def _latex_wrap(a: str) -> str:

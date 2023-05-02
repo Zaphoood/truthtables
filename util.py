@@ -1,3 +1,6 @@
+from typing import Optional
+
+
 def split_tokens(literal: str) -> list[str]:
     tokens = []
     accumulator = ""
@@ -41,27 +44,22 @@ def unwrap_parentheses(literal: list[str]) -> list[str]:
 def table_to_str(
     table: list[list[str]],
     col_delim: str,
-    before_row: str,
-    between_rows: str,
+    before_row: Optional[str],
+    between_rows: Optional[str],
     ljust: bool = False,
 ) -> str:
     col_widths = [
         max([len(table[row][col]) for row in range(len(table))])
         for col in range(len(table[0]))
     ]
-    out = ""
-    for i, row in enumerate(table):
-        if before_row:
-            out += before_row
+    rows = []
+    for row in table:
+        row_str = before_row if before_row is not None else ""
         elements = [
             el.ljust(col_widths[j]) if ljust else el for j, el in enumerate(row)
         ]
-        out += col_delim.join(elements)
-        # TODO: Use "\n".join for this
-        # Append newline if it's not the last line
-        if i != len(table) - 1:
-            if between_rows:
-                out += "\n" + between_rows
-            out += "\n"
+        row_str += col_delim.join(elements)
+        rows.append(row_str)
 
-    return out
+    glue = f"\n{between_rows}\n" if between_rows is not None else "\n"
+    return glue.join(rows)
