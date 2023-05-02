@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import Enum, IntEnum, auto
-from typing import Optional, Set
+from typing import Callable, Optional, Set
 from string import ascii_uppercase
 from util import split_tokens, unwrap_parentheses, table_to_str
 
@@ -18,6 +18,19 @@ class Operator(IntEnum):
     OR = auto()
     IMPLIES = auto()
     EQUIVALENT = auto()
+
+
+UNARY_OPERATORS: dict[Operator, Callable[[bool], bool]] = {
+    Operator.NONE: lambda a: a,
+    Operator.NOT: lambda a: not a,
+}
+
+BINARY_OPERATORS: dict[Operator, Callable[[bool, bool], bool]] = {
+    Operator.AND: lambda a, b: a and b,
+    Operator.OR: lambda a, b: a or b,
+    Operator.IMPLIES: lambda a, b: (not a) or b,
+    Operator.EQUIVALENT: lambda a, b: a == b,
+}
 
 
 OPERATOR_TO_STR: dict[Formatting, dict[Operator, str]] = {
@@ -202,27 +215,11 @@ class Statement:
     def evaluate(self, var_table: dict[str, bool]) -> bool:
         if self.left is None:
             right = self.right.evaluate(var_table)
-            match self.operator:
-                case Operator.NONE:
-                    return right
-                case Operator.NOT:
-                    return not right
-                case _:
-                    raise Exception(f"Unkown unary operator ({self.operator}).")
+            return UNARY_OPERATORS[self.operator](right)
         else:
             left = self.left.evaluate(var_table)
             right = self.right.evaluate(var_table)
-            match self.operator:
-                case Operator.OR:
-                    return left or right
-                case Operator.AND:
-                    return left and right
-                case Operator.IMPLIES:
-                    return implies(left, right)
-                case Operator.EQUIVALENT:
-                    return equivalent(left, right)
-                case _:
-                    raise Exception(f"Unknown binary operator ({self.operator}).")
+            return BINARY_OPERATORS[self.operator](left, right)
 
     __call__ = evaluate
 
@@ -242,14 +239,6 @@ class Variable(Statement):
 
     def evaluate(self, var_table: dict[str, bool]) -> bool:
         return var_table[self.name]
-
-
-def implies(a: bool, b: bool) -> bool:
-    return (not a) or b
-
-
-def equivalent(a: bool, b: bool) -> bool:
-    return a == b
 
 
 class Formatter:
