@@ -1,6 +1,6 @@
 # Truth tables 🧮
 
-A library for generating logical _truth tables_ with support for LaTeX source code output.
+A library for generating [truth tables](https://en.wikipedia.org/wiki/Truth_table) with support for LaTeX source code output.
 
 ## Requirements
 
