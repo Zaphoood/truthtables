@@ -73,7 +73,7 @@ class Statement:
          /    \
       not A    B
 
-    Note that Statements that have unary operators or no operator at all (such as "B" in the above example) have no right child.
+    Note that Statements that have unary operators or no operator at all (such as "B" in the above example) have no left node.
     """
 
     def __init__(self, tokens: list[str] | str):
