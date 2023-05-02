@@ -196,37 +196,28 @@ class Statement:
 
     def evaluate(self, var_table: dict[str, bool]) -> bool:
         if self.left is None:
+            right = self.right.evaluate(var_table)
             match self.operator:
                 case Operator.NONE:
-                    return self.right.evaluate(var_table)
+                    return right
                 case Operator.NOT:
-                    return not self.right.evaluate(var_table)
+                    return not right
                 case _:
-                    raise Exception(
-                        f"Two operands for unary operator ({self.operator})."
-                    )
+                    raise Exception(f"Unkown unary operator ({self.operator}).")
         else:
+            left = self.left.evaluate(var_table)
+            right = self.right.evaluate(var_table)
             match self.operator:
                 case Operator.OR:
-                    return self.left.evaluate(var_table) or self.right.evaluate(
-                        var_table
-                    )
+                    return left or right
                 case Operator.AND:
-                    return self.left.evaluate(var_table) and self.right.evaluate(
-                        var_table
-                    )
+                    return left and right
                 case Operator.IMPLIES:
-                    return implication(
-                        self.left.evaluate(var_table), self.right.evaluate(var_table)
-                    )
+                    return implication(left, right)
                 case Operator.EQUIVALENT:
-                    return equivalence(
-                        self.left.evaluate(var_table), self.right.evaluate(var_table)
-                    )
+                    return equivalence(left, right)
                 case _:
-                    raise Exception(
-                        f"No left-hand operand for binary operator ({self.operator})."
-                    )
+                    raise Exception(f"Unknown binary operator ({self.operator}).")
 
     __call__ = evaluate
 
