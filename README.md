@@ -10,13 +10,13 @@ A library for generating [truth tables](https://en.wikipedia.org/wiki/Truth_tabl
 
 Import everything you need
 
-```
+```python
 from truthtables import Statement, Formatter, Formatting
 ```
 
 Create logical statements
 
-```
+```python
 statement1 = Statement("not A or B")
 statement2 = Statement("A => B")
 ```
@@ -26,7 +26,7 @@ Variables used in the statement are extracted automatically; variable names can 
 
 Create a Formatter using a list of statements defined earlier.
 
-```
+```python
 formatter = Formatter([statement1, statement2, ...], mode=Formatting.HUMAN)
 ```
 
@@ -34,7 +34,7 @@ If you want the output to be compatible with LaTeX, use `Formatting.LATEX` inste
 
 Finally, print out the formatted truth table
 
-```
+```python
 print(formatter.format_table())
 ```
 
