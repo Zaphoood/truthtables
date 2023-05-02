@@ -270,16 +270,15 @@ class Formatter:
         self.variables = sorted(list(variables))
 
     def format_table(self):
-        var_table = {var: False for var in self.variables}
         statements = [Statement(var) for var in self.variables] + self.statements
         n_cols = len(statements)
-        table = []
-        table.append(
-            [
-                self.wrap_expression(statement.format(mode=self.mode))
-                for statement in statements
-            ]
-        )
+        header = [
+            self.wrap_expression(statement.format(mode=self.mode))
+            for statement in statements
+        ]
+        table = [header]
+
+        var_table = {var: False for var in self.variables}
         for i in range(2 ** len(self.variables)):
             for j, var in enumerate(reversed(self.variables)):
                 var_table[var] = not ((i >> j) % 2)
