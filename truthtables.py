@@ -203,7 +203,7 @@ class Statement:
                     return not self.right.evaluate(var_table)
                 case _:
                     raise Exception(
-                        "Two operands for unary operator ({self.operator})."
+                        f"Two operands for unary operator ({self.operator})."
                     )
         else:
             match self.operator:
@@ -225,7 +225,7 @@ class Statement:
                     )
                 case _:
                     raise Exception(
-                        "No left-hand operand for binary operator ({self.operator})."
+                        f"No left-hand operand for binary operator ({self.operator})."
                     )
 
     __call__ = evaluate
