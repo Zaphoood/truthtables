@@ -271,13 +271,13 @@ class Formatter:
 
     def format_table(self):
         var_table = {var: False for var in self.variables}
-        self.statements = [Statement(var) for var in self.variables] + self.statements
-        n_cols = len(self.statements)
+        statements = [Statement(var) for var in self.variables] + self.statements
+        n_cols = len(statements)
         table = []
         table.append(
             [
-                self.wrap_if(statement.format(mode=self.mode))
-                for statement in self.statements
+                self.wrap_expression(statement.format(mode=self.mode))
+                for statement in statements
             ]
         )
         for i in range(2 ** len(self.variables)):
@@ -285,8 +285,8 @@ class Formatter:
                 var_table[var] = not ((i >> j) % 2)
             table.append(
                 [
-                    self.wrap_if(self.format_bool(statement(var_table)))
-                    for statement in self.statements
+                    self.wrap_expression(self.format_bool(statement(var_table)))
+                    for statement in statements
                 ]
             )
 
@@ -323,14 +323,7 @@ class Formatter:
     def format_bool(self, value: bool) -> str:
         return TRUE_STR if value else FALSE_STR
 
-    def wrap_if(self, a: str) -> str:
-        def _latex_wrap(a: str) -> str:
+    def wrap_expression(self, a: str) -> str:
+        if self.mode == Formatting.LATEX:
             return LATEX_WRAP_CHAR + a + LATEX_WRAP_CHAR
-
-        match self.mode:
-            case Formatting.HUMAN:
-                return a
-            case Formatting.LATEX:
-                return _latex_wrap(a)
-            case _:
-                raise Exception("Exhaustive handling of Formatting in wrap_if()")
+        return a
