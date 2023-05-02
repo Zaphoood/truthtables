@@ -1,4 +1,4 @@
-# Truth tables
+# Truth tables 🧮
 
 A library for generating logical _truth tables_ with support for LaTeX source code output.
 
