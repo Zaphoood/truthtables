@@ -4,6 +4,12 @@ from typing import Optional, Set
 from string import ascii_uppercase
 from util import split_tokens, unwrap_parentheses, table_to_str
 
+
+class Formatting(Enum):
+    HUMAN = auto()
+    LATEX = auto()
+
+
 # Ordered by precedence (highest to lowest)
 class Operator(IntEnum):
     NONE = auto()
@@ -14,20 +20,21 @@ class Operator(IntEnum):
     EQUIVALENT = auto()
 
 
-operators_as_strs = {
-    Operator.NOT: "¬",
-    Operator.AND: "∧",
-    Operator.OR: "∨",
-    Operator.IMPLIES: "⇒",
-    Operator.EQUIVALENT: "⇔",
-}
-
-operators_as_latex = {
-    Operator.NOT: "\\lnot",
-    Operator.AND: "\\land",
-    Operator.OR: "\\lor",
-    Operator.IMPLIES: "\\Rightarrow",
-    Operator.EQUIVALENT: "\\Leftrightarrow",
+OPERATOR_TO_STR: dict[Formatting, dict[Operator, str]] = {
+    Formatting.HUMAN: {
+        Operator.NOT: "¬",
+        Operator.AND: "∧",
+        Operator.OR: "∨",
+        Operator.IMPLIES: "⇒",
+        Operator.EQUIVALENT: "⇔",
+    },
+    Formatting.LATEX: {
+        Operator.NOT: "\\lnot",
+        Operator.AND: "\\land",
+        Operator.OR: "\\lor",
+        Operator.IMPLIES: "\\Rightarrow",
+        Operator.EQUIVALENT: "\\Leftrightarrow",
+    },
 }
 LATEX_TABLE_PRELUDE = "\\begin{{tabular}}{{ {columns} }}"
 LATEX_TABLE_EPILOGUE = "\\end{tabular}"
@@ -47,11 +54,6 @@ operator_macros = {
     "impl": Operator.IMPLIES,
     "=>": Operator.IMPLIES,
 }
-
-
-class Formatting(Enum):
-    HUMAN = auto()
-    LATEX = auto()
 
 
 class MalformedExpressionError(Exception):
@@ -226,13 +228,7 @@ class Statement:
 
     def format(self, mode=Formatting.HUMAN):
         literal = self.literal
-        match mode:
-            case Formatting.HUMAN:
-                subst_table = operators_as_strs
-            case Formatting.LATEX:
-                subst_table = operators_as_latex
-            case _:
-                raise Exception("Exhaustive handling of Formatting in _do_format")
+        subst_table = OPERATOR_TO_STR[mode]
         for macro, subst in operator_macros.items():
             literal = literal.replace(macro, subst_table[subst])
         return literal
