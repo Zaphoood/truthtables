@@ -92,7 +92,6 @@ class Statement:
         self.left: Optional[Statement]
         self.right: Statement
         self.variables: Set[str]
-        self._formatted: Optional[str] = None
 
         (
             self.literal,
@@ -226,12 +225,6 @@ class Statement:
     __call__ = evaluate
 
     def format(self, mode=Formatting.HUMAN):
-        # Use cached value if available
-        if self._formatted is None:
-            self._formatted = self._format(mode)
-        return self._formatted
-
-    def _format(self, mode: Formatting) -> str:
         literal = self.literal
         match mode:
             case Formatting.HUMAN:
