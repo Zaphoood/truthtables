@@ -2,6 +2,7 @@ from __future__ import annotations
 from enum import Enum, IntEnum, auto
 from typing import Optional, Set
 from string import ascii_uppercase
+from util import split_tokens, unwrap_parentheses
 
 # Ordered by precedence (highest to lowest)
 class Operator(IntEnum):
@@ -66,6 +67,11 @@ class AmbiguousPrecedenceError(MalformedExpressionError):
             super().__init__(message)
 
 
+def is_valid_var_name(s: str) -> bool:
+    # TODO: Consider extending the definition of a valid variable name
+    return s in ascii_uppercase
+
+
 class Statement:
     """Represent a logical statement that can be formatted nicely and whose value can be evaluated
     by providing values for its variables.
@@ -106,9 +112,9 @@ class Statement:
         All tokens of the expression (including parentheses) must be separated by spaces."""
         if isinstance(tokens, str):
             tokens = tokens.strip()
-            if self._is_valid_var_name(tokens):
+            if is_valid_var_name(tokens):
                 return tokens, Operator.NONE, None, Variable(tokens), {tokens}
-            split = self._split_tokens(tokens)
+            split = split_tokens(tokens)
             literal = tokens
         elif isinstance(tokens, list):
             split = tokens
@@ -119,23 +125,6 @@ class Statement:
         except AmbiguousPrecedenceError:
             raise AmbiguousPrecedenceError(literal)
 
-    def _split_tokens(self, literal: str) -> list[str]:
-        tokens = []
-        accumulator = ""
-        for char in literal:
-            if char in [" ", "(", ")"]:
-                if accumulator:
-                    tokens.append(accumulator)
-                    accumulator = ""
-                if char != " ":
-                    tokens.append(char)
-            else:
-                accumulator += char
-        if accumulator:
-            tokens.append(accumulator)
-
-        return tokens
-
     def _parse_substatement(
         self, tokens: list[str]
     ) -> tuple[Operator, Optional[Statement], Statement, Set[str]]:
@@ -143,7 +132,7 @@ class Statement:
         right: list[str] = []
         operator: Optional[Operator] = None
 
-        tokens = self._unwrap_parentheses(tokens)
+        tokens = unwrap_parentheses(tokens)
         # Find highest precedence operator
         highest_prec = 0
         highest_prec_index: Optional[int] = None
@@ -166,7 +155,7 @@ class Statement:
                 if prec > highest_prec:
                     highest_prec = prec
                     highest_prec_index = i
-            if self._is_valid_var_name(token):
+            if is_valid_var_name(token):
                 n_vars += 1
 
         if highest_prec_index is None:
@@ -179,7 +168,7 @@ class Statement:
                 raise MalformedExpressionError(
                     f"Multiple variables but no operator in expression: \"{' '.join(tokens)}\""
                 )
-            if not self._is_valid_var_name(tokens[0]):
+            if not is_valid_var_name(tokens[0]):
                 raise MalformedExpressionError(
                     f"'{tokens}' doesn't contain a valid variable name."
                 )
@@ -191,10 +180,10 @@ class Statement:
         op_macro = tokens[highest_prec_index]
 
         if len(left) > 0:
-            left_statement = Statement(self._unwrap_parentheses(left))
+            left_statement = Statement(unwrap_parentheses(left))
         else:
             left_statement = None
-        right_statement = Statement(self._unwrap_parentheses(right))
+        right_statement = Statement(unwrap_parentheses(right))
 
         variables = (
             right_statement.variables
@@ -204,31 +193,6 @@ class Statement:
         operator = operator_macros[op_macro]
 
         return operator, left_statement, right_statement, variables
-
-    def _is_valid_var_name(self, name_candidate: str) -> bool:
-        # TODO: Consider extending the definition of a valid variable name
-        return name_candidate in ascii_uppercase
-
-    def _unwrap_parentheses(self, literal: list[str]) -> list[str]:
-        stack = []
-        level = 0
-        for char in literal:
-            match char:
-                case "(":
-                    stack.append(level)
-                    level += 1
-                case ")":
-                    level -= 1
-                    stack.append(level)
-        while literal[0] == "(":
-            if literal[-1] != ")":
-                break
-            if stack[0] in stack[1:-1]:
-                break
-            stack = stack[1:-1]
-            literal = literal[1:-1]
-
-        return literal
 
     def evaluate(self, var_table: dict[str, bool]) -> bool:
         if self.left is None:
