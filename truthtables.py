@@ -83,7 +83,7 @@ class Statement:
          /    \
       not A    B
 
-    Note that Statements that have unary operators or no operator at all (such as "B" in the above example) have no left node.
+    Note that Statements with one or no operator(s) have no left node.
     """
 
     def __init__(self, tokens: list[str] | str):
@@ -105,20 +105,24 @@ class Statement:
     def _parse_statement(
         self, tokens: list[str] | str
     ) -> tuple[str, Operator, Optional[Statement], Statement, Set[str]]:
-        """Returns a callable representing the literal expression
-        and an integer representing the number of arguments.
+        """Returns a callable representing the literal expression and an
+        integer representing the number of arguments.
 
-        Parantheses are allowed, other types of brackets are not.
-        All tokens of the expression (including parentheses) must be separated by spaces."""
+        Parantheses are allowed, other types of brackets are not. All tokens of
+        the expression (including parentheses) must be separated by spaces."""
         if isinstance(tokens, str):
             tokens = tokens.strip()
             if is_valid_var_name(tokens):
                 return tokens, Operator.NONE, None, Variable(tokens), {tokens}
             split = split_tokens(tokens)
             literal = tokens
-        elif isinstance(tokens, list):
+        elif isinstance(tokens, list) and all(
+            isinstance(token, str) for token in tokens
+        ):
             split = tokens
             literal = " ".join(tokens)
+        else:
+            raise ValueError("'statements' must be str or list[str]")
 
         try:
             return (literal, *self._parse_substatement(split))
