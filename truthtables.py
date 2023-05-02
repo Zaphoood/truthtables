@@ -53,7 +53,7 @@ class Formatting(Enum):
     LATEX = auto()
 
 
-class AmbiguousPrecedence(Exception):
+class AmbiguousPrecedenceError(Exception):
     def __init__(self, expression: Optional[str] = None):
         message = "Precedence is not defined between implication (=>) and equivalence (<=>). Please use parentheses to clarify your statement."
         if expression:
@@ -112,8 +112,8 @@ class Statement:
 
         try:
             return (literal, *self._parse_substatement(split))
-        except AmbiguousPrecedence:
-            raise AmbiguousPrecedence(literal)
+        except AmbiguousPrecedenceError:
+            raise AmbiguousPrecedenceError(literal)
 
     def _split_tokens(self, literal: str) -> list[str]:
         tokens = []
@@ -158,7 +158,7 @@ class Statement:
                     Operator.IMPLIES,
                     Operator.EQUIVALENT,
                 ]:
-                    raise AmbiguousPrecedence()
+                    raise AmbiguousPrecedenceError()
                 if prec > highest_prec:
                     highest_prec = prec
                     highest_prec_index = i
