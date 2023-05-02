@@ -213,9 +213,9 @@ class Statement:
                 case Operator.AND:
                     return left and right
                 case Operator.IMPLIES:
-                    return implication(left, right)
+                    return implies(left, right)
                 case Operator.EQUIVALENT:
-                    return equivalence(left, right)
+                    return equivalent(left, right)
                 case _:
                     raise Exception(f"Unknown binary operator ({self.operator}).")
 
@@ -224,10 +224,10 @@ class Statement:
     def format(self, mode=Formatting.HUMAN):
         # Use cached value if available
         if self._formatted is None:
-            self._formatted = self._do_format(mode)
+            self._formatted = self._format(mode)
         return self._formatted
 
-    def _do_format(self, mode: Formatting) -> str:
+    def _format(self, mode: Formatting) -> str:
         literal = self.literal
         match mode:
             case Formatting.HUMAN:
@@ -251,14 +251,14 @@ class Variable(Statement):
         return var_table[self.name]
 
 
-def implication(a: bool, b: bool) -> bool:
+def implies(a: bool, b: bool) -> bool:
     if a:
         return b
     else:
         return True
 
 
-def equivalence(a: bool, b: bool) -> bool:
+def equivalent(a: bool, b: bool) -> bool:
     return a == b
 
 
