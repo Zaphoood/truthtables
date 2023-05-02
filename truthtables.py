@@ -2,7 +2,7 @@ from __future__ import annotations
 from enum import Enum, IntEnum, auto
 from typing import Optional, Set
 from string import ascii_uppercase
-from util import split_tokens, unwrap_parentheses
+from util import split_tokens, unwrap_parentheses, table_to_str
 
 # Ordered by precedence (highest to lowest)
 class Operator(IntEnum):
@@ -306,7 +306,13 @@ class Formatter:
             case _:
                 raise Exception("Exhaustive handling of Formatting in format_table()")
 
-        output += self._table_to_str(table, col_delim, before_row, after_row)
+        output += table_to_str(
+            table,
+            col_delim,
+            before_row,
+            after_row,
+            ljust=self.mode == Formatting.HUMAN,
+        )
 
         match self.mode:
             case Formatting.HUMAN:
@@ -317,35 +323,6 @@ class Formatter:
                 raise Exception("Exhaustive handling of Formatting in format_table()")
 
         return output
-
-    def _table_to_str(
-        self, table: list[list[str]], col_delim: str, before_row: str, between_rows: str
-    ) -> str:
-        col_widths = [
-            max([len(table[row][col]) for row in range(len(table))])
-            for col in range(len(table[0]))
-        ]
-        out = ""
-        for i, row in enumerate(table):
-            if before_row:
-                out += before_row
-            elements = []
-            for j, el in enumerate(row):
-                # TODO: Abstract this
-                if self.mode == Formatting.HUMAN:
-                    elements.append(
-                        el.ljust(col_widths[j]) if self.mode == Formatting.HUMAN else el
-                    )
-                else:
-                    elements.append(el)
-            out += col_delim.join(elements)
-            # Append newline if it's not the last line
-            if i != len(table) - 1:
-                if between_rows:
-                    out += "\n" + between_rows
-                out += "\n"
-
-        return out
 
     def format_bool(self, bool_value: bool) -> str:
         formatted = bool_value and TRUE_STR or FALSE_STR
