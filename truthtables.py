@@ -62,6 +62,10 @@ class AmbiguousPrecedenceError(Exception):
             super().__init__(message)
 
 
+class MalformedExpressionError(Exception):
+    pass
+
+
 class Statement:
     """Represent a logical statement that can be formatted nicely and whose value can be evaluated
     by providing values for its variables.
@@ -137,7 +141,7 @@ class Statement:
     ) -> tuple[Operator, Optional[Statement], Statement, Set[str]]:
         left: list[str] = []
         right: list[str] = []
-        op: Optional[Operator] = None
+        operator: Optional[Operator] = None
 
         tokens = self._unwrap_parentheses(tokens)
         # Find highest precedence operator
@@ -168,31 +172,38 @@ class Statement:
         if highest_prec_index is None:
             # No operator found
             if n_vars == 0:
-                raise Exception(
+                raise MalformedExpressionError(
                     f"No variables and no operator in expression: \"{' '.join(tokens)}\""
                 )
             elif n_vars > 1:
-                raise Exception(
+                raise MalformedExpressionError(
                     f"Multiple variables but no operator in expression: \"{' '.join(tokens)}\""
                 )
             if not self._is_valid_var_name(tokens[0]):
-                raise SyntaxError(f"'{tokens}' doesn't contain a valid variable name.")
+                raise MalformedExpressionError(
+                    f"'{tokens}' doesn't contain a valid variable name."
+                )
 
             return Operator.NONE, None, Variable(tokens[0]), {tokens[0]}
 
-        if highest_prec_index > 0:
-            left = self._unwrap_parentheses(tokens[:highest_prec_index])
-            left_statement = Statement(left)
-            left_vars = left_statement.variables
+        left = tokens[:highest_prec_index]
+        right = tokens[highest_prec_index + 1 :]
+        op_macro = tokens[highest_prec_index]
+
+        if len(left) > 0:
+            left_statement = Statement(self._unwrap_parentheses(left))
         else:
             left_statement = None
-            left_vars = set()
-        right = self._unwrap_parentheses(tokens[highest_prec_index + 1 :])
-        right_statement = Statement(right)
-        variables = right_statement.variables.union(left_vars)
-        op = operator_macros[tokens[highest_prec_index]]
+        right_statement = Statement(self._unwrap_parentheses(right))
 
-        return op, left_statement, right_statement, variables
+        variables = (
+            right_statement.variables
+            if left_statement is None
+            else right_statement.variables.union(left_statement.variables)
+        )
+        operator = operator_macros[op_macro]
+
+        return operator, left_statement, right_statement, variables
 
     def _is_valid_var_name(self, name_candidate: str) -> bool:
         # TODO: Consider extending the definition of a valid variable name
