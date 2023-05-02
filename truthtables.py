@@ -266,12 +266,8 @@ class Formatter:
     def __init__(self, statements: list[Statement], mode=Formatting.HUMAN) -> None:
         self.statements = statements
         self.mode = mode
-
-        variables = set()
-        for statement in self.statements:
-            variables = variables.union(statement.variables)
-        self.variables = list(variables)
-        self.variables.sort()
+        variables = set().union(*[statement.variables for statement in statements])
+        self.variables = sorted(list(variables))
 
     def format_table(self):
         var_table = {var: False for var in self.variables}
