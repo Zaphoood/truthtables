@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 from enum import Enum, IntEnum, auto
-from typing import Callable, Optional, Set
 from string import ascii_uppercase
-from util import split_tokens, unwrap_parentheses, table_to_str
+from typing import Callable, Optional, Set
+
+from util import split_tokens, table_to_str, unwrap_parentheses
 
 
 class Formatting(Enum):

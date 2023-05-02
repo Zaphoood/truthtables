@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from truthtables import MalformedExpressionError, Statement, Formatter, Formatting
+from truthtables import Formatter, Formatting, MalformedExpressionError, Statement
 
 
 def main():
