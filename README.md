@@ -1,7 +1,6 @@
 # Truth tables
 
-This library is used to calculate logical truth tables, with the option to format the output
-into LaTeX source code.
+A library for generating logical _truth tables_ with support for LaTeX source code output.
 
 ## Requirements
 
