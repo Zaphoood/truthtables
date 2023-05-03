@@ -52,8 +52,11 @@ LATEX_COLUMN_DELIM = " & "
 LATEX_INDENT = "    "
 LATEX_HLINE = LATEX_INDENT + " \\\\ \\hline"
 LATEX_WRAP_CHAR = "$"
-TRUE_STR = "w"
-FALSE_STR = "f"
+
+BOOL_FORMAT = {
+    True: "w",
+    False: "f",
+}
 
 operator_macros = {
     "not": Operator.NOT,

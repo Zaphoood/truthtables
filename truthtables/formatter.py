@@ -1,12 +1,11 @@
 from truthtables.common import (
-    FALSE_STR,
     LATEX_COLUMN_DELIM,
     LATEX_HLINE,
     LATEX_INDENT,
     LATEX_TABLE_EPILOGUE,
     LATEX_TABLE_PRELUDE,
     LATEX_WRAP_CHAR,
-    TRUE_STR,
+    BOOL_FORMAT,
     Formatting,
 )
 from truthtables.statement import Statement
@@ -14,11 +13,17 @@ from truthtables.util import table_to_str
 
 
 class Formatter:
-    def __init__(self, statements: list[Statement], mode=Formatting.HUMAN) -> None:
+    def __init__(
+        self,
+        statements: list[Statement],
+        mode: Formatting = Formatting.HUMAN,
+        bool_format: dict[bool, str] = BOOL_FORMAT,
+    ) -> None:
         self.statements = statements
         self.mode = mode
         variables = set().union(*[statement.variables for statement in statements])
         self.variables = sorted(list(variables))
+        self.bool_format = bool_format
 
     def format_table(self):
         statements = [Statement(var) for var in self.variables] + self.statements
@@ -71,7 +76,7 @@ class Formatter:
         return output
 
     def format_bool(self, value: bool) -> str:
-        return TRUE_STR if value else FALSE_STR
+        return self.bool_format[value]
 
     def wrap_expression(self, a: str) -> str:
         if self.mode == Formatting.LATEX:
