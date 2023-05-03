@@ -21,7 +21,7 @@ statement1 = Statement("not A or B")
 statement2 = Statement("A => B")
 ```
 
-Use can use `not`, `and`, `=>` (logical implication) and `<=>` (logical equivalence).
+You can use `not`, `and`, `=>` (logical implication) and `<=>` (logical equivalence).
 Variables used in the statement are extracted automatically; variable names can be any uppercase letter.
 
 Create a Formatter using a list of statements defined earlier.
