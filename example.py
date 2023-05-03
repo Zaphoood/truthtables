@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-from truthtables import Formatter, Formatting, MalformedExpressionError, Statement
+from formatter import Formatter
+
+from common import Formatting
+from exceptions import MalformedExpressionError
+from statement import Statement
 
 
 def main():
     try:
         statements = [
-            Statement("not A or B"),
-            Statement("(A <=> B) and (B <=> C)"),
+            Statement("A and B and (A or not C)"),
         ]
         f = Formatter(statements, mode=Formatting.HUMAN)
         print(f.format_table())
