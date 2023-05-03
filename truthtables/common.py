@@ -54,8 +54,8 @@ LATEX_HLINE = LATEX_INDENT + " \\\\ \\hline"
 LATEX_WRAP_CHAR = "$"
 
 BOOL_FORMAT = {
-    True: "w",
-    False: "f",
+    True: "T",
+    False: "F",
 }
 
 operator_macros = {
