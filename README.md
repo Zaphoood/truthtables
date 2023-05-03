@@ -63,3 +63,19 @@ try:
 except MalformedExpressionError as e:
     print(e)
 ```
+
+## Command Line Interface
+
+```
+Usage: cli.py [-h] [-f [{human,latex}]] [-b BOOL] expression [expression ...]
+
+positional arguments:
+  expression            An expression to evaluate
+
+options:
+  -h, --help            show this help message and exit
+  -f [{human,latex}], --format [{human,latex}]
+                        Choose a formatting mode
+  -b BOOL, --bool BOOL  Specify formatting for boolean values. Format is
+                        '<false>,<true>' (e.g. '0,1')
+```
