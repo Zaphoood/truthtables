@@ -73,8 +73,8 @@ class Statement:
 
         try:
             return (literal, *self._parse_substatement(split))
-        except AmbiguousPrecedenceError:
-            raise AmbiguousPrecedenceError(literal)
+        except MalformedExpressionError as e:
+            raise MalformedExpressionError(e.message, expression=literal)
 
     def _parse_substatement(
         self, tokens: list[str]
@@ -142,6 +142,14 @@ class Statement:
             else right_statement.variables.union(left_statement.variables)
         )
         operator = operator_macros[op_macro]
+        if left_statement is None and operator not in UNARY_OPERATORS.keys():
+            raise MalformedExpressionError(
+                f"Non-unary operator '{op_macro}' in unary expression"
+            )
+        elif left_statement is not None and operator not in BINARY_OPERATORS.keys():
+            raise MalformedExpressionError(
+                f"Non-binary operator '{op_macro}' in binary expression"
+            )
 
         return operator, left_statement, right_statement, variables
 
