@@ -57,7 +57,6 @@ e. g. `A <=> B <=> C`. To work around this, use parentheses and/or restructure t
 ```python
 from truthtables.exceptions import MalformedExpressionError
 
-...
 try:
   s = Statement("A not B")
 except MalformedExpressionError as e:
