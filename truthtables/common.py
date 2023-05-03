@@ -46,7 +46,7 @@ OPERATOR_TO_STR: dict[Formatting, dict[Operator, str]] = {
         Operator.EQUIVALENT: "\\Leftrightarrow",
     },
 }
-LATEX_TABLE_PRELUDE = "\\begin{{tabular}}{{ {columns} }}"
+LATEX_TABLE_PROLOGUE = "\\begin{{tabular}}{{ {columns} }}"
 LATEX_TABLE_EPILOGUE = "\\end{tabular}"
 LATEX_COLUMN_DELIM = " & "
 LATEX_INDENT = "    "
