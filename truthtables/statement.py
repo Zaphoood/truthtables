@@ -3,7 +3,7 @@ from __future__ import annotations
 from string import ascii_uppercase
 from typing import Optional, Set
 
-from common import (
+from truthtables.common import (
     BINARY_OPERATORS,
     OPERATOR_TO_STR,
     UNARY_OPERATORS,
@@ -11,8 +11,8 @@ from common import (
     Operator,
     operator_macros,
 )
-from exceptions import AmbiguousPrecedenceError, MalformedExpressionError
-from util import split_tokens, unwrap_parentheses
+from truthtables.exceptions import AmbiguousPrecedenceError, MalformedExpressionError
+from truthtables.util import split_tokens, unwrap_parentheses
 
 
 def is_valid_var_name(s: str) -> bool:

@@ -1,4 +1,4 @@
-from common import (
+from truthtables.common import (
     FALSE_STR,
     LATEX_COLUMN_DELIM,
     LATEX_HLINE,
@@ -9,8 +9,8 @@ from common import (
     TRUE_STR,
     Formatting,
 )
-from statement import Statement
-from util import table_to_str
+from truthtables.statement import Statement
+from truthtables.util import table_to_str
 
 
 class Formatter:

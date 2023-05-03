@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
-from formatter import Formatter
-
-from common import Formatting
-from exceptions import MalformedExpressionError
-from statement import Statement
+from truthtables import Formatter, Formatting, Statement
+from truthtables.exceptions import MalformedExpressionError
 
 
 def main():

@@ -51,3 +51,15 @@ f   f   w         w
 Please note that you cannot concatenate multiple operators of the same precedence,
 e. g. `A <=> B <=> C`. To work around this, use parentheses and/or restructure the statement
 (in this case, you could use `(A <=> B) and (B <=> C)`)
+
+### Handling exceptions
+
+```python
+from truthtables.exceptions import MalformedExpressionError
+
+...
+try:
+  s = Statement("A not B")
+except MalformedExpressionError as e:
+    print(e)
+```
