@@ -27,6 +27,12 @@ parser.add_argument(
     action="store",
     help="Specify formatting for boolean values. Format is '<false>,<true>' (e.g. '0,1')",
 )
+parser.add_argument(
+    "-r",
+    "--reverse",
+    action="store_true",
+    help="Reverse order of values. Default is to start at all false values",
+)
 
 
 def parse_bool_format(s: str, delim: str = ",") -> dict[bool, str]:
@@ -53,5 +59,6 @@ if __name__ == "__main__":
         statements,
         mode=FORMATTING_MODES[args.format],
         bool_format=bool_format,
+        reverse=args.reverse,
     ).format_table()
     print(table)

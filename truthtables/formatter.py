@@ -18,12 +18,14 @@ class Formatter:
         statements: list[Statement],
         mode: Formatting = Formatting.HUMAN,
         bool_format: dict[bool, str] = BOOL_FORMAT,
+        reverse: bool = False,
     ) -> None:
         self.statements = statements
         self.mode = mode
         variables = set().union(*[statement.variables for statement in statements])
         self.variables = sorted(list(variables))
         self.bool_format = bool_format
+        self.reverse = reverse
 
     def format_table(self):
         statements = [Statement(var) for var in self.variables] + self.statements
@@ -35,7 +37,10 @@ class Formatter:
         table = [header]
 
         var_table = {var: False for var in self.variables}
-        for i in range(2 ** len(self.variables)):
+        values = range(2 ** len(self.variables))
+        if self.reverse:
+            values = reversed(values)
+        for i in values:
             for j, var in enumerate(reversed(self.variables)):
                 var_table[var] = bool((i >> j) % 2)
             table.append(
