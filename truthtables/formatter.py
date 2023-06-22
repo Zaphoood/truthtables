@@ -37,7 +37,7 @@ class Formatter:
         var_table = {var: False for var in self.variables}
         for i in range(2 ** len(self.variables)):
             for j, var in enumerate(reversed(self.variables)):
-                var_table[var] = not ((i >> j) % 2)
+                var_table[var] = bool((i >> j) % 2)
             table.append(
                 [
                     self.wrap_expression(self.format_bool(statement(var_table)))
