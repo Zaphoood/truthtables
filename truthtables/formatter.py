@@ -1,15 +1,15 @@
-from truthtables.common import (
+from .common import (
     LATEX_COLUMN_DELIM,
     LATEX_HLINE,
     LATEX_INDENT,
+    LATEX_TABLE_PROLOGUE,
     LATEX_TABLE_EPILOGUE,
-    LATEX_TABLE_PRELUDE,
     LATEX_WRAP_CHAR,
     BOOL_FORMAT,
     Formatting,
 )
-from truthtables.statement import Statement
-from truthtables.util import table_to_str
+from .statement import Statement
+from .util import table_to_str
 
 
 class Formatter:
@@ -60,7 +60,7 @@ class Formatter:
                 raise Exception("Exhaustive handling of Formatting in format_table()")
 
         if self.mode == Formatting.LATEX:
-            output += LATEX_TABLE_PRELUDE.format(columns="|".join("c" * n_cols)) + "\n"
+            output += LATEX_TABLE_PROLOGUE.format(columns="|".join("c" * n_cols)) + "\n"
 
         output += table_to_str(
             table,
